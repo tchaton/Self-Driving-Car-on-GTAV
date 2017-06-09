@@ -16,6 +16,7 @@ python dataset.py -d dataset/
 
 ### Simulation configuration
 weathers = ["CLEAR", "EXTRASUNNY", "CLOUDS", "OVERCAST", "RAIN", "CLEARING", "THUNDER", "SMOG", "FOGGY", "XMAS", "SNOWLIGHT", "BLIZZARD", "NEUTRAL", "SNOW" ]
+
 hours = [0,4,8,12,16,20]
 
 ### DATASET FORMAT:
