@@ -15,6 +15,7 @@ from keras.preprocessing.image import Iterator
 from keras.applications.imagenet_utils import preprocess_input
 from keras.preprocessing.image import ImageDataGenerator
 import threading
+import glob
 
 
 
@@ -58,7 +59,7 @@ class Iterator(object):
 	def __next__(self, *args, **kwargs):
 		return self.next(*args, **kwargs)
 
-class UniqueConditionIterator(Iterator):
+class UniqueConditionGenerator(Iterator):
 	"""
 	Example of use 
 	import model_generator as md
@@ -75,7 +76,7 @@ class UniqueConditionIterator(Iterator):
 		self._len_file = len_file
 		self._path = path
 		self._size = size
-		super(UniqueConditionIterator, self).__init__(len_file, batch_size, shuffle, seed)
+		super(UniqueConditionGenerator, self).__init__(len_file, batch_size, shuffle, seed)
 
 	def next(self):
 		with self.lock:
@@ -142,7 +143,7 @@ class SequentialUniqueConditionIterator(object):
 	def __next__(self, *args, **kwargs):
 		return self.next(*args, **kwargs)
 
-class SequentialUniqueConditionIterator(SequentialUniqueConditionIterator):
+class SequentialUniqueConditionGenerator(SequentialUniqueConditionIterator):
 	"""
 	Example of use 
 	import model_generator as md
@@ -159,7 +160,7 @@ class SequentialUniqueConditionIterator(SequentialUniqueConditionIterator):
 		self._len_file = len_file
 		self._path = path
 		self._size = size
-		super(SequentialUniqueConditionIterator, self).__init__(len_file, batch_size, shuffle, seed)
+		super(SequentialUniqueConditionGenerator, self).__init__(len_file, batch_size, shuffle, seed)
 
 	def next(self):
 		with self.lock:
@@ -170,3 +171,88 @@ class SequentialUniqueConditionIterator(SequentialUniqueConditionIterator):
 		X = np.array([imresize(d['frame'],self._size) for d in data])
 		Y = np.array([[d['throttle'],d['brake'],d['steering']] for d in data]) 
 		return X,Y
+
+
+class SequentialWeatherIterator(object):
+	def __init__(self, n, batch_size, shuffle, seed):
+		self.n = n
+		self.batch_size = batch_size
+		self.shuffle = shuffle
+		self.batch_index = 0
+		self.total_batches_seen = 0
+		self.lock = threading.Lock()
+		self.index_generator = self._flow_index(n, batch_size, shuffle, seed)
+
+	def reset(self):
+		self.batch_index = 0
+
+	def _flow_index(self, n, batch_size=32, shuffle=False, seed=None):
+		self.reset()
+		while 1:
+			if seed is not None:
+				np.random.seed(seed + self.total_batches_seen)
+			if self.batch_index == 0:
+				index_array = np.arange(n)
+				if shuffle:
+					index_array = np.random.permutation(n)
+
+			current_index = (self.batch_index + 1 ) % n ## Changed batch_size by 1 and * in +
+			if n > current_index + batch_size:
+				current_batch_size = batch_size
+				self.batch_index += 1
+			else:
+				current_batch_size = n - current_index
+				self.batch_index = 0
+			self.total_batches_seen += 1
+			yield (index_array[current_index: current_index + current_batch_size],
+					current_index, current_batch_size)
+
+	def __iter__(self):
+		return self
+
+	def __next__(self, *args, **kwargs):
+		return self.next(*args, **kwargs)
+
+class SequentialWeatherGenerator(SequentialWeatherIterator):
+	"""
+	Example of use 
+	import model_generator as md
+	for index_array in md.SequentialWeatherGenerator(4,PATH_DATA):
+	    print(index_array)
+	"""
+	def __init__(self, batch_size, dataset_path, fixed_weather=True, size=(120,360), shuffle=False, seed=None):
+		self._batch_size=batch_size   
+		self._shuffe = shuffle
+		self._seed = seed
+		self._dataset_path = dataset_path
+		self._size = size
+		self._fixed_weather = fixed_weather
+		self._weathers = [f for f in os.listdir(self._dataset_path) if f[0].upper() == f[0]]
+		self._selected_weather = np.random.choice(self._weathers)
+		self.random_directory()
+		super(SequentialWeatherGenerator, self).__init__(self._number_frames, self._batch_size, self._shuffe, self._seed)
+
+	def random_directory(self):
+		if not self._fixed_weather:
+			self._selected_weather = np.random.choice(self._weathers)
+		self._files = [f.replace('\\','/') for f in glob.glob(self._dataset_path+self._selected_weather+'/*/*')]
+		self._selected_file = np.random.choice(self._files)
+		self._number_frames = len(os.listdir(self._selected_file+'/'))
+
+	def next(self):
+		with self.lock:
+			index_array, current_index, current_batch_size = next(self.index_generator)
+		#super(SequentialWeatherGenerator, self).reset()
+		paths = gf.create_paths(self._selected_file,index_array,True)
+		data = gf.load_data_from_paths(paths,select=True)
+		X = np.array([imresize(d['frame'],self._size) for d in data])
+		Y = np.array([[d['throttle'],d['brake'],d['steering']] for d in data]) 
+		if index_array[-1] == (self._number_frames-1):
+			self.random_directory()
+			#print(self._selected_file)
+			super(SequentialWeatherGenerator, self).__init__(self._number_frames, self._batch_size, self._shuffe, self._seed)
+
+		return X,Y
+
+
+
