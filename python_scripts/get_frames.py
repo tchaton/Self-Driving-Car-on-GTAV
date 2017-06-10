@@ -6,6 +6,8 @@ import numpy as np
 from numpy.lib.stride_tricks import as_strided
 import gzip
 import pickle
+from PIL import Image
+from keras.preprocessing.image import array_to_img,img_to_array
 
 
 PATH_DATA = '../dataset/'
@@ -123,3 +125,16 @@ def load_data_from_paths(paths,select=False):
 		for path in paths:
 			data.append(get_frame(path,active=True))		
 	return data
+
+def extract_map(img):
+	height,width,channel = img.shape
+	print(height,width,channel)
+	p_width = [0.03*width,0.16*width]
+	p_height = [0.85*height,.99*height]
+	img = array_to_img(img)
+	img = img.crop((p_width[0],p_height[0],p_width[1],p_height[1]))
+	return img_to_array(img)
+
+
+
+
