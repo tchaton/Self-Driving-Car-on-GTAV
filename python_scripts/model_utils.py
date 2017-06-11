@@ -46,6 +46,50 @@ def get_model(time_len=1):
 
 	return model
 
+
+
+
+
+# Parameters
+learning_rate = 0.025
+training_iters = 50
+batch_size = 128
+display_step = 1
+
+# Network Parameters
+n_input = 784 # MNIST data input (img shape: 28*28)
+n_classes = 10 # MNIST total classes (0-9 digits)
+keep_prob_ReLU = 0.5 # Dropout, probability to keep units
+dropout_prob_SNN = 0.05 # Dropout, probability to dropout units
+
+# tf Graph input
+x = tf.placeholder(tf.float32, [None, n_input])
+y = tf.placeholder(tf.float32, [None, n_classes])
+keep_prob = tf.placeholder(tf.float32) #dropout (keep probability for ReLU)
+dropout_prob =  tf.placeholder(tf.float32) #dropout (dropout probability for SNN)
+is_training = tf.placeholder(tf.bool)
+
+
+
+weights2 = {
+    # 5x5 conv, 1 input, 32 outputs
+    'wc1': tf.Variable(tf.random_normal([5, 5, 1, 32],stddev=np.sqrt(1/25)) ),
+    # 5x5 conv, 32 inputs, 64 outputs
+    'wc2': tf.Variable(tf.random_normal([5, 5, 32, 64],stddev=np.sqrt(1/(25*32)))),
+    # fully connected, 7*7*64 inputs, 1024 outputs
+    'wd1': tf.Variable(tf.random_normal([7*7*64, 1024],stddev=np.sqrt(1/(7*7*64)))),
+    # 1024 inputs, 10 outputs (class prediction)
+    'out': tf.Variable(tf.random_normal([1024, n_classes],stddev=np.sqrt(1/(1024))))
+}
+
+biases2 = {
+    'bc1': tf.Variable(tf.random_normal([32],stddev=0)),
+    'bc2': tf.Variable(tf.random_normal([64],stddev=0)),
+    'bd1': tf.Variable(tf.random_normal([1024],stddev=0)),
+    'out': tf.Variable(tf.random_normal([n_classes],stddev=0))
+}
+
+
 def selu(x):
     with ops.name_scope('elu') as scope:
         alpha = 1.6732632423543772848170429916717
@@ -127,48 +171,6 @@ def conv_net_SNN(x=tf.placeholder(tf.float32, [None, n_input]), weights=weights2
     # Output, class prediction
     out = tf.add(tf.matmul(fc1, weights['out']), biases['out'])
     return out
-
-
-
-
-# Parameters
-learning_rate = 0.025
-training_iters = 50
-batch_size = 128
-display_step = 1
-
-# Network Parameters
-n_input = 784 # MNIST data input (img shape: 28*28)
-n_classes = 10 # MNIST total classes (0-9 digits)
-keep_prob_ReLU = 0.5 # Dropout, probability to keep units
-dropout_prob_SNN = 0.05 # Dropout, probability to dropout units
-
-# tf Graph input
-x = tf.placeholder(tf.float32, [None, n_input])
-y = tf.placeholder(tf.float32, [None, n_classes])
-keep_prob = tf.placeholder(tf.float32) #dropout (keep probability for ReLU)
-dropout_prob =  tf.placeholder(tf.float32) #dropout (dropout probability for SNN)
-is_training = tf.placeholder(tf.bool)
-
-
-
-weights2 = {
-    # 5x5 conv, 1 input, 32 outputs
-    'wc1': tf.Variable(tf.random_normal([5, 5, 1, 32],stddev=np.sqrt(1/25)) ),
-    # 5x5 conv, 32 inputs, 64 outputs
-    'wc2': tf.Variable(tf.random_normal([5, 5, 32, 64],stddev=np.sqrt(1/(25*32)))),
-    # fully connected, 7*7*64 inputs, 1024 outputs
-    'wd1': tf.Variable(tf.random_normal([7*7*64, 1024],stddev=np.sqrt(1/(7*7*64)))),
-    # 1024 inputs, 10 outputs (class prediction)
-    'out': tf.Variable(tf.random_normal([1024, n_classes],stddev=np.sqrt(1/(1024))))
-}
-
-biases2 = {
-    'bc1': tf.Variable(tf.random_normal([32],stddev=0)),
-    'bc2': tf.Variable(tf.random_normal([64],stddev=0)),
-    'bd1': tf.Variable(tf.random_normal([1024],stddev=0)),
-    'out': tf.Variable(tf.random_normal([n_classes],stddev=0))
-}
 
 # def get_modelSNN():
 # 	pred_SNN = conv_net_SNN(x, weights2, biases2, dropout_prob,is_training)
