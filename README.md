@@ -22,4 +22,10 @@ hours = [0,4,8,12,16,20]
 ### DATASET FORMAT:
 dataset/weather/hour/timestamp_simulation/index_of_frames.pz
 
+### PLUGIN DEV
+
+ADD _IS_VEHICLE_DAMAGED for instance in order to get vehicule damage.
+
+See http://www.dev-c.com/nativedb/ for a full list of all the methods that can be used.
+
 
